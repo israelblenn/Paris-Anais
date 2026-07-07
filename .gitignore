@@ -1,3 +1,4 @@
 .env
 contentful.config.mjs
 node_modules/
+public/
