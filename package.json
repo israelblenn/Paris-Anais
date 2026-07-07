@@ -4,7 +4,8 @@
     "build": "node scripts/build.mjs",
     "config": "node scripts/generate-contentful-config.mjs",
     "dev": "npm run config && npx serve . -p 3456",
-    "discover": "node scripts/discover-contentful.mjs"
+    "discover": "node scripts/discover-contentful.mjs",
+    "test": "node --test"
   },
   "devDependencies": {
     "dotenv": "^16.4.7"

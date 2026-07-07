@@ -124,7 +124,7 @@ async function resolveVideoAspectRatios(catalog) {
   })));
 }
 
-function buildGallery(gridEl) {
+function buildGallery(gridEl, { motion = true } = {}) {
   const GAP = 24;
 
   const lazy = new LazyMedia({
@@ -163,7 +163,7 @@ function buildGallery(gridEl) {
     return frame;
   }
 
-  const grid = new MasonryGrid(gridEl, { gap: GAP, renderItem });
+  const grid = new MasonryGrid(gridEl, { gap: GAP, renderItem, motion });
   grid.lazy = lazy;
   return grid;
 }
@@ -181,6 +181,7 @@ async function initGallery() {
       scrollArea.appendChild(clone);
       pages.push(clone);
     }
+    pageLoop.refreshLayout?.();
 
     await populateDetails(scrollArea);
     const catalog = await fetchGalleryMedia();
@@ -189,10 +190,11 @@ async function initGallery() {
     await resolveVideoAspectRatios(catalog);
 
     const grids = [];
-    for (const p of pages) {
-      grids.push(buildGallery(p.querySelector('.bg-grid')));
+    for (const [index, p] of pages.entries()) {
+      grids.push(buildGallery(p.querySelector('.bg-grid'), { motion: index === 0 }));
     }
     grids.forEach((grid) => grid.add(catalog));
+    pageLoop.refreshLayout?.();
     await initGalleryFilters(catalog, grids);
 
     // Start inside the loop band once layout is ready; pin scroll while media

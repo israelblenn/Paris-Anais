@@ -44,7 +44,7 @@ export class MasonryGrid {
     this.stagger = options.stagger ?? 24;
     this.easing = options.easing ?? 'cubic-bezier(0.22, 1, 0.36, 1)';
 
-    this.motion = !PREFERS_REDUCED_MOTION;
+    this.motion = options.motion ?? !PREFERS_REDUCED_MOTION;
     this.records = [];
 
     this._contentHeight = 0;

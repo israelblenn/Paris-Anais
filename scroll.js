@@ -8,7 +8,7 @@ export const LOOP_MIN_COPIES = 3;
  * periods is invisible. Returns the target scrollTop, or null when looping does
  * not apply (too few copies / unknown period).
  */
-function loopNormalize(scrollTop, period, copies = LOOP_MIN_COPIES) {
+export function loopNormalize(scrollTop, period, copies = LOOP_MIN_COPIES) {
   if (!(period > 0) || copies < LOOP_MIN_COPIES) return null;
   const rel = (((scrollTop - period) % period) + period) % period;
   return period + rel;
@@ -16,7 +16,9 @@ function loopNormalize(scrollTop, period, copies = LOOP_MIN_COPIES) {
 
 export const pageLoop = {};
 
-initScroll();
+if (typeof document !== 'undefined') {
+  initScroll();
+}
 
 function initScroll() {
   const animationConfig = {
@@ -63,9 +65,33 @@ function initScroll() {
   let userScrollPending = false;
   let isUserScrolling = false;
   let activePeriod = 0;
+  let pages = [];
+  let aboutSections = [];
+  const observedPages = new Set();
+  let contentResizeScheduled = false;
+  const contentResizeObserver = new ResizeObserver(() => {
+    if (contentResizeScheduled) return;
+    contentResizeScheduled = true;
+    requestAnimationFrame(() => {
+      contentResizeScheduled = false;
+      refreshLayout();
+    });
+  });
+
+  function refreshCachedElements() {
+    pages = [...scrollArea.querySelectorAll('.page')];
+    aboutSections = [...scrollArea.querySelectorAll('.about')];
+  }
+
+  function syncContentResizeObserver() {
+    for (const page of pages) {
+      if (observedPages.has(page)) continue;
+      contentResizeObserver.observe(page);
+      observedPages.add(page);
+    }
+  }
 
   function measurePeriod() {
-    const pages = scrollArea.querySelectorAll('.page');
     if (pages.length < LOOP_MIN_COPIES) return 0;
     const height = pages[0].offsetHeight;
     return height > 0 ? height : 0;
@@ -87,7 +113,7 @@ function initScroll() {
   const hasScrollEnd = 'onscrollend' in window;
 
   function pageCount() {
-    return scrollArea.querySelectorAll('.page').length;
+    return pages.length;
   }
 
   function getPeriod() {
@@ -121,7 +147,7 @@ function initScroll() {
     let nearest = null;
     let nearestDist = Infinity;
 
-    for (const page of scrollArea.querySelectorAll('.page')) {
+    for (const page of pages) {
       const dist = Math.abs(page.getBoundingClientRect().top - areaTop);
       if (dist < nearestDist) {
         nearestDist = dist;
@@ -181,10 +207,21 @@ function initScroll() {
 
     pinObserver = new ResizeObserver(() => compensateAnchorDrift());
 
-    for (const page of scrollArea.querySelectorAll('.page')) {
+    for (const page of pages) {
       pinObserver.observe(page);
     }
   }
+
+  function refreshLayout() {
+    refreshCachedElements();
+    syncContentResizeObserver();
+    refreshActivePeriod();
+    compensateAnchorDrift();
+    applyLoopWrap();
+    handleScroll();
+  }
+
+  pageLoop.refreshLayout = refreshLayout;
 
   // Enter the loop band after first paint and hold scroll steady while media,
   // fonts, and iOS viewport chrome settle (often 1–4s after load).
@@ -341,7 +378,7 @@ function initScroll() {
     let nearest = null;
     let nearestDist = Infinity;
 
-    for (const el of scrollArea.querySelectorAll('.about')) {
+    for (const el of aboutSections) {
       const dist = Math.abs(el.getBoundingClientRect().top - areaTop);
       if (dist < nearestDist) {
         nearestDist = dist;
@@ -353,7 +390,6 @@ function initScroll() {
   }
 
   function scrollToAbout(fromPage) {
-    const pages = [...scrollArea.querySelectorAll('.page')];
     const index = pages.indexOf(fromPage);
     if (index < 0) return;
 
@@ -430,10 +466,7 @@ function initScroll() {
   }, true);
 
   function onViewportChange() {
-    refreshActivePeriod();
-    compensateAnchorDrift();
-    applyLoopWrap();
-    handleScroll();
+    refreshLayout();
   }
 
   function markUserScroll() {
@@ -474,11 +507,6 @@ function initScroll() {
     if (page) scrollToAbout(page);
   });
 
-  const observer = new MutationObserver(handleScroll);
-  observer.observe(scrollArea, {
-    childList: true,
-    subtree: true,
-  });
-
-  handleScroll();
+  contentResizeObserver.observe(scrollArea);
+  refreshLayout();
 }
