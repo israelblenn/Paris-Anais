@@ -1,0 +1,922 @@
+/* ==========================================================================
+   Reset & base
+   Normalize box model, strip default margins, and set global page defaults.
+   Cream background (#FFF9ED), body overflow hidden so custom scroll handles movement.
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+  background-color: #FFF9ED;
+  color: #1a1a1a;
+  line-height: 1.5;
+  font-family: "EB Garamond", serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* Media and form elements inherit sensible defaults */
+img,
+video,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+/* ==========================================================================
+   Typography
+   Base type scale for body copy, lists, and headings.
+   ========================================================================== */
+
+p {
+  font-size: 22px;
+  white-space: pre-wrap;
+
+}
+
+li {
+  font-size: 24px;
+}
+
+h1 {
+  font-size: 90px;
+  font-weight: 400;
+  font-family: "Rock 3D";
+  line-height: 1.2;
+  margin-bottom: 80px;
+}
+
+h2 {
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1.1; 
+}
+
+/* ==========================================================================
+   Layout
+   Scroll shell: native scrollbar hidden; custom track/thumb drives position.
+   Page is centered with a gallery peek strip visible at the bottom of the hero.
+   ========================================================================== */
+
+.scroll-viewport {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.scroll-area {
+  width: 100%;
+  height: 100%;
+  overflow-y: scroll;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroll-area::-webkit-scrollbar {
+  display: none;
+}
+
+.page {
+  --gallery-peek: 96px;
+  width: 100%;
+  max-width: 1264px;
+  margin-inline: auto;
+  padding-inline: 32px;
+}
+
+/* Hero fills viewport minus gallery peek; content centered vertically */
+.hero {
+  min-height: calc(100svh - var(--gallery-peek));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.site-header {
+  text-align: center;
+}
+
+/* ==========================================================================
+   Navigation
+   Vertical filter list. Hover shows a flower; active filters use circle/strike
+   overlays toggled via .is-visible in JS.
+========================================================================== */
+
+.site-nav ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  & li {
+    position: relative;
+    cursor: pointer;  
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: calc(100% + 8px);
+      width: 32px;
+      height: 32px;
+      background: url("assets/flower.png") center / contain no-repeat;
+      transform: translateY(-50%) rotate(var(--flower-rotation, 0deg));
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    &:hover::before {
+      opacity: 1;
+    }
+
+  }
+}
+
+.site-nav__filter-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.site-nav__label {
+  position: relative;
+  z-index: 1;
+}
+
+.site-nav__circle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  max-width: none;
+  transform: translate(-50%, -45%);
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0;
+  z-index: 0;
+
+  &.is-visible {
+    opacity: 1;
+  }  
+}
+
+.site-nav__strike {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-30%);
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0;
+  z-index: 1;
+
+  &.is-visible {
+    opacity: 1;
+  }  
+}
+
+/* ==========================================================================
+   Click flower pop
+   Ephemeral flower burst on click; position and spin set via CSS custom props.
+========================================================================== */
+
+@keyframes flower-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.35) rotate(calc(var(--spin, 0deg) - 10deg * var(--spin-dir, 1)));
+    animation-timing-function: cubic-bezier(0.12, 0.85, 0.28, 1);
+  }
+
+  14% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--drift-apex-x, 0px)), calc(-50% - 11px)) scale(1.03) rotate(calc(var(--spin, 0deg) - 2deg * var(--spin-dir, 1)));
+    animation-timing-function: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--drift-apex-x, 0px)), calc(-50% + 26px)) scale(0.75) rotate(calc(var(--spin, 0deg) + 16deg * var(--spin-dir, 1)));
+  }
+}
+
+.flower-pop {
+  position: fixed;
+  width: 36px;
+  height: 36px;
+  pointer-events: none;
+  z-index: 10001;
+  will-change: transform, opacity;
+  animation: flower-pop 1.15s forwards;
+}
+
+/* ==========================================================================
+   About
+   Two-column bio + media. Links get a slight random rotation via --link-rotation.
+   Bridge flower and stacked layout appear on small screens (see responsive).
+========================================================================== */
+
+.about {
+  display: flex;
+  justify-content: space-between;
+  gap: 32px;
+  margin-top: 32px;
+  padding-top: 128px;
+  min-height: 50vh;
+}
+
+.about__bio {
+  max-width: 640px;
+
+  & a {
+    display: inline-block;
+    color: inherit;
+    text-decoration: none;
+    transform: rotate(var(--link-rotation, 0deg));
+  }
+}
+
+.about__at {
+  font-family: "Rock 3D", cursive;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.about__image {
+  flex-shrink: 0;
+}
+
+.about__media {
+  display: block;
+  max-width: 100%;
+  max-height: 300px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Darken blend removes light video backgrounds against the cream page */
+.about__media--video {
+  mix-blend-mode: darken;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* Safari fails to composite mix-blend-mode on <video> */
+@supports (-webkit-touch-callout: none) {
+  .about__media--video {
+    mix-blend-mode: normal;
+  }
+}
+
+.about-bridge {
+  display: none;
+}
+
+/* ==========================================================================
+   Custom scrollbar
+   Fixed track on the right; decorative wheels at ends; draggable thumb maps to
+   scroll position. Hidden on tablet/mobile where native scroll is used.
+========================================================================== */
+
+.scroll-track {
+  position: fixed;
+  right: 8px;
+  top: 8px;
+  bottom: 8px;
+  width: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-radius: 100px;
+  z-index: 10000;
+  pointer-events: auto;
+}
+
+.scroll-wheels {
+  position: absolute;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1px;
+  width: 100%;
+  z-index: 200;
+  pointer-events: none;
+}
+
+.scroll-wheel {
+  line-height: 0;
+
+  & img {
+    transform-origin: center;
+    scale: 1.5;
+  }
+}
+
+.scroll-thumb-wrapper {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 10px;
+  bottom: 10px;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.scroll-thumb {
+  position: absolute;
+  left: 2px;
+  width: 10px;
+  background: rgba(0, 0, 0, 0.13);
+  cursor: grab;
+  border-radius: 100px;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.23);
+  }
+
+  &:active {
+    background: rgba(0, 0, 0, 0.23);
+  }
+}
+
+/* Keep grabbing cursor for the whole drag, even when the pointer leaves the thumb */
+body.scroll-thumb-dragging,
+body.scroll-thumb-dragging * {
+  cursor: grabbing !important;
+}
+
+/* ==========================================================================
+   Scroll-linked sprite animation
+   Fixed corner character; sprite sheet position driven by scroll in JS.
+   --scroll-animation-scale sizes the viewport and sheet together.
+========================================================================== */
+
+.scroll-animation {
+  --scroll-animation-scale: 1.3;
+  width: calc(100px * var(--scroll-animation-scale));
+  height: calc(100px * var(--scroll-animation-scale));
+  overflow: hidden;
+  position: fixed;
+  bottom: 0;
+  right: -11.5px;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.scroll-animation__sprites {
+  width: calc(1200px * var(--scroll-animation-scale));
+  height: calc(100px * var(--scroll-animation-scale));
+}
+
+.scroll-animation__sheet {
+  position: absolute;
+  width: calc(1200px * var(--scroll-animation-scale));
+  height: calc(100px * var(--scroll-animation-scale));
+  max-width: none;
+}
+
+.scroll-animation__sheet--behind {
+  z-index: -1;
+}
+
+.scroll-animation__sheet--front {
+  z-index: 10;
+}
+
+/* ==========================================================================
+   Gallery background grid
+   Absolutely positioned thumbnails in a masonry-style layout. Items are 0×0
+   anchors; frame/media sized by JS. .is-lifted hides source while modal flies in.
+========================================================================== */
+
+.bg-grid {
+  position: relative;
+  width: 100%;
+}
+
+.bg-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  background: transparent;
+  cursor: pointer;
+  contain: layout paint;
+  backface-visibility: hidden;
+  transform-origin: center center;
+  filter: drop-shadow(4px 4px 8px rgba(0, 0, 0, 0.3));
+
+  &.is-lifted {
+    visibility: hidden;
+  }
+
+  /* filter + transform on the same ancestor blacks out <video> in Safari */
+  &:has(.bg-item__frame--video) {
+    filter: none;
+    contain: layout;
+  }
+}
+
+.bg-item__frame {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #000;
+  border-radius: 0;
+  backface-visibility: hidden;
+  transform-origin: center center;
+}
+
+.bg-item__frame--video {
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 1px;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+.bg-item__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: rgba(138, 132, 121, 0.25);
+}
+
+/* Opacity 0.999 avoids a Safari compositing glitch with video in transformed parents */
+.bg-item video.bg-item__media {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  opacity: 0.999;
+}
+
+.gallery-error {
+  text-align: center;
+  color: #8a8479;
+  padding: 32px 0;
+}
+
+/* ==========================================================================
+   Gallery modal (BGM)
+   Full-screen overlay for single-item fly-in and collection view. CSS vars
+   control edges, thumb size, and z-index stacking when body.bgm-open.
+========================================================================== */
+
+.bgm {
+  --bgm-edge: 64px;
+  --bgm-edge-top: 96px;
+  --bgm-viewport-fill: 0.9;
+  --bgm-single-max-width: 1200px;
+  --bgm-thumb-height: 72px;
+  --bgm-collection-max-width: 1684px;
+  --bgm-collection-gap: 64px;
+  --bgm-close-top: 16px;
+  --bgm-close-inset: 16px;
+  --bgm-close-height: 24.8px;
+  --bgm-close-block-end: calc(var(--bgm-close-top) + var(--bgm-close-height));
+
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+
+  &.is-active {
+    pointer-events: auto;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
+body.bgm-open .bgm {
+  z-index: var(--bgm-z-modal);
+}
+
+/* Frosted cream backdrop; opacity animated in JS */
+.bgm__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(255, 249, 237, 0.9);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  will-change: opacity;
+}
+
+/* Single-item mode: centered frame sized with container queries */
+.bgm__slot {
+  position: absolute;
+  inset: var(--bgm-close-block-end) var(--bgm-edge) var(--bgm-close-block-end) var(--bgm-edge);
+  z-index: 1;
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.bgm--collection .bgm__slot {
+  display: none;
+}
+
+.bgm__frame {
+  position: relative;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  aspect-ratio: var(--bgm-aspect, 1);
+
+  &.is-preparing {
+    visibility: hidden;
+  }
+}
+
+.bgm__slot > .bgm__frame {
+  width: min(
+    var(--bgm-single-max-width),
+    calc(100cqw * var(--bgm-viewport-fill)),
+    calc(100cqh * var(--bgm-viewport-fill) * var(--bgm-aspect, 1))
+  );
+  max-height: calc(100cqh * var(--bgm-viewport-fill));
+  height: auto;
+}
+
+/* Flyer clones the grid item for open/close transform animation */
+.bgm__flyer {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  z-index: 1;
+  transform: none;
+  transform-origin: center center;
+  border: 1px solid #000;
+  background: #ffffff;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint;
+  backface-visibility: hidden;
+  will-change: transform, filter;
+  filter: drop-shadow(4px 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.bgm__flyer--video {
+  isolation: isolate;
+  border-radius: 1px;
+  filter: none;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
+  contain: layout;
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+.bgm__flyer--controls {
+  pointer-events: auto;
+}
+
+.bgm__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.bgm__flyer--video video.bgm__media {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  opacity: 0.999;
+}
+
+.bgm__close {
+  position: absolute;
+  top: var(--bgm-close-top);
+  left: var(--bgm-close-inset);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5.6px 9.6px;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  /* color: #1a1a1a; */
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  font-family: sans-serif;
+  transition: opacity 0.3s ease, transform 0.15s ease;
+
+  &.is-visible {
+    opacity: 0.5;
+
+    &:hover {
+      opacity: 1;
+      transform: scale(1.05);
+      border: 1px solid #000;
+    }
+  }
+
+  &:not(.is-visible) {
+    transform: none;
+    pointer-events: none;
+  }
+}
+
+/* Lock page scroll and raise scrollbar above modal while open */
+body.bgm-open {
+  --bgm-z-scrollbar: 100001;
+  --bgm-z-modal: 100002;
+  overflow: hidden;
+  overscroll-behavior: none;
+
+  &.scroll-area {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
+html:has(body.bgm-open) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.bgm-open .scroll-animation,
+body.bgm-open .scroll-track {
+  z-index: var(--bgm-z-scrollbar);
+}
+
+/* Collection mode: info panel + stage + thumbnail strip */
+.bgm__panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  width: min(var(--bgm-collection-max-width), calc(100% - 2 * var(--bgm-edge)));
+  max-width: var(--bgm-collection-max-width);
+  margin-inline: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--bgm-collection-gap);
+  padding: var(--bgm-edge-top) var(--bgm-edge) var(--bgm-edge);
+  pointer-events: none;
+
+  &.is-revealed .bgm__info {
+    opacity: 1;
+  }
+}
+
+.bgm__info {
+  position: relative;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: min(420px, 38vw);
+  max-height: 100%;
+  min-height: 0;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  pointer-events: auto;
+  padding-bottom: 16px;
+}
+
+.bgm__title {
+  flex-shrink: 0;
+  margin: 0 0 32px;
+
+  & em {
+    font-style: italic;
+  }
+}
+
+
+.bgm__desc-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.bgm__desc {
+  font-size: 20px;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.bgm__stage {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  container-type: size;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.bgm--collection .bgm__frame {
+  width: min(
+    100cqw,
+    calc(100cqh * var(--bgm-aspect, 1))
+  );
+  max-height: 100cqh;
+  height: auto;
+  z-index: 2;
+}
+
+.bgm__thumbs {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 16px;
+  width: 100%;
+  margin-top: 40px;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  pointer-events: auto;
+}
+
+.bgm__panel.is-revealed .bgm__thumbs {
+  opacity: 1;
+}
+
+.bgm__thumb {
+  flex: 0 0 auto;
+  height: var(--bgm-thumb-height);
+  aspect-ratio: var(--thumb-ratio, 1);
+  padding: 0;
+  border: 1px solid #000;
+  background: #000;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.bgm__thumb:hover,
+.bgm__thumb.is-active {
+  opacity: 1;
+}
+
+.bgm__thumb img,
+.bgm__thumb video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.bgm--collection .bgm__close {
+  z-index: 3;
+}
+
+/* ==========================================================================
+   Gallery modal — mobile collection (≤900px)
+   Stack stage above info; tighter edges; thumbs hidden (swipe/nav elsewhere).
+========================================================================== */
+
+@media (max-width: 900px) {
+  
+  .bgm {
+    --bgm-edge: 16px;
+    --bgm-collection-gap: 32px;
+    --bgm-viewport-fill: 1;
+    --bgm-collection-top: calc(var(--bgm-close-block-end) + var(--bgm-edge));
+  }
+
+  .bgm__panel {
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--bgm-collection-gap);
+    padding: var(--bgm-edge);
+    padding-top: var(--bgm-collection-top);
+    overflow: hidden;
+  }
+
+  .bgm__info {
+    order: 2;
+    flex: 1 1 0;
+    min-height: 0;
+    max-width: none;
+    margin-top: 0;
+  }
+
+  .bgm__stage {
+    order: 1;
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: 0;
+    height: auto;
+    container-type: inline-size;
+    display: block;
+  }
+
+  .bgm--collection .bgm__frame {
+    width: min(
+      100%,
+      calc(
+        (100vh - var(--bgm-collection-top) - var(--bgm-collection-gap) - var(--bgm-edge))
+        * var(--bgm-aspect, 1)
+      )
+    );
+    max-height: calc(
+      100vh - var(--bgm-collection-top) - var(--bgm-collection-gap) - var(--bgm-edge)
+    );
+    height: auto;
+  }
+
+  .page {
+    padding-inline: 16px;
+  }
+
+  .bgm__thumbs,
+  .scroll-track,
+  .scroll-animation,
+  .site-nav li::before {
+    display: none;
+  }
+
+  .about {
+    min-height: 100svh;
+    align-items: center;
+    margin-top: 0;
+    padding-top: 0;
+    justify-content: center;
+  }
+
+  .about-bridge {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 80px;
+    margin-bottom: -72px;
+  }
+
+  .about-bridge__flower {
+    width: 48px;
+    height: auto;
+  }
+
+  .about__image {
+    display: none;
+  }
+
+}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paris Anais</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Rock+3D&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://images.ctfassets.net" crossorigin>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="scroll-viewport">
+    <div class="scroll-area">
+      <main class="page">
+        <section class="hero">
+          <header class="site-header">
+            <h1>Paris Anais</h1>
+            <nav class="site-nav" aria-label="Main">
+              <ul>
+                <li data-filter="illustration">children’s illustration</li>
+                <li data-filter="animation">animation</li>
+                <li data-scroll-to="about">about / contact</li>
+              </ul>
+            </nav>
+          </header>
+        </section>
+
+        <section class="gallery" aria-label="Gallery">
+          <div class="bg-grid"></div>
+        </section>
+
+        <div class="about-bridge" aria-hidden="true">
+          <img class="about-bridge__flower" src="assets/flower.png" alt="">
+        </div>
+
+        <section class="about" id="about" aria-label="About">
+          <div class="about__bio"></div>
+          <div class="about__image"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <aside class="scroll-track" aria-hidden="true">
+    <div class="scroll-wheels">
+      <div class="scroll-wheel scroll-wheel--top">
+        <img src="assets/wheel-gray.svg" alt="" width="12" height="12">
+      </div>
+      <div class="scroll-wheel scroll-wheel--bottom">
+        <img src="assets/wheel-gray.svg" alt="" width="12" height="12">
+      </div>
+    </div>
+    <div class="scroll-thumb-wrapper">
+      <div class="scroll-thumb"></div>
+      <div class="scroll-thumb scroll-thumb--ghost"></div>
+    </div>
+  </aside>
+
+  <div class="scroll-animation" aria-hidden="true">
+    <div class="scroll-animation__sprites">
+      <img class="scroll-animation__sheet scroll-animation__sheet--behind" src="assets/spritesheet_behind.svg" alt="">
+      <img class="scroll-animation__sheet scroll-animation__sheet--front" src="assets/spritesheet.svg" alt="">
+    </div>
+  </div>
+  <script>
+    document.addEventListener('mouseover', (event) => {
+      const item = event.target.closest?.('.site-nav li');
+      if (!item || (event.relatedTarget && item.contains(event.relatedTarget))) return;
+      item.style.setProperty('--flower-rotation', `${Math.floor(Math.random() * 360)}deg`);
+    });
+  </script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
