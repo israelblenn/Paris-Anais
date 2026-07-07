@@ -58,11 +58,32 @@ function initScroll() {
   let pinObserver = null;
   let stabilizeAnchor = null;
   let stabilizeTargetTop = 0;
-  let wrapFrame = null;
   let wrapDebounceTimer = null;
+  let pinAdjusting = false;
+  let userScrollPending = false;
+  let isUserScrolling = false;
+  let activePeriod = 0;
 
-  // Rewriting scrollTop during iOS momentum causes jitter at the loop seam.
-  const deferLoopWrap = window.matchMedia('(hover: none)').matches;
+  function measurePeriod() {
+    const pages = scrollArea.querySelectorAll('.page');
+    if (pages.length < LOOP_MIN_COPIES) return 0;
+    const height = pages[0].offsetHeight;
+    return height > 0 ? height : 0;
+  }
+
+  function initActivePeriod() {
+    const measured = measurePeriod();
+    if (measured > 0) activePeriod = measured;
+    return activePeriod;
+  }
+
+  function refreshActivePeriod() {
+    const measured = measurePeriod();
+    if (measured > 0) activePeriod = measured;
+    return activePeriod;
+  }
+
+  // Rewriting scrollTop during active scroll causes jitter at the loop seam.
   const hasScrollEnd = 'onscrollend' in window;
 
   function pageCount() {
@@ -70,10 +91,7 @@ function initScroll() {
   }
 
   function getPeriod() {
-    const pages = scrollArea.querySelectorAll('.page');
-    if (pages.length < LOOP_MIN_COPIES) return 0;
-    const height = pages[0].offsetHeight;
-    return height > 0 ? height : 0;
+    return activePeriod > 0 ? activePeriod : measurePeriod();
   }
 
   function applyLoopWrap() {
@@ -91,18 +109,11 @@ function initScroll() {
   function scheduleLoopWrap() {
     if (suppressWrap) return;
 
-    if (deferLoopWrap) {
-      if (hasScrollEnd) return;
-      clearTimeout(wrapDebounceTimer);
-      wrapDebounceTimer = setTimeout(loopWrapNow, 120);
-      return;
-    }
+    // Wait for scroll to settle; scrollend handles wrap when supported.
+    if (hasScrollEnd) return;
 
-    if (wrapFrame) return;
-    wrapFrame = requestAnimationFrame(() => {
-      wrapFrame = null;
-      loopWrapNow();
-    });
+    clearTimeout(wrapDebounceTimer);
+    wrapDebounceTimer = setTimeout(loopWrapNow, 120);
   }
 
   function nearestPageBreak() {
@@ -131,10 +142,13 @@ function initScroll() {
   }
 
   function compensateAnchorDrift() {
-    if (!stabilizeAnchor) return;
+    if (!stabilizeAnchor || isUserScrolling || userScrollPending) return;
     const areaTop = scrollArea.getBoundingClientRect().top;
     const drift = stabilizeAnchor.getBoundingClientRect().top - areaTop - stabilizeTargetTop;
-    if (Math.abs(drift) > 0.25) scrollArea.scrollTop += drift;
+    if (Math.abs(drift) > 0.25) {
+      pinAdjusting = true;
+      scrollArea.scrollTop += drift;
+    }
   }
 
   function stopPinObserver() {
@@ -144,6 +158,10 @@ function initScroll() {
   }
 
   function endStabilize() {
+    if (isUserScrolling) {
+      settleTimer = setTimeout(endStabilize, 400);
+      return;
+    }
     clearTimeout(settleTimer);
     settleTimer = null;
     stopPinObserver();
@@ -172,18 +190,17 @@ function initScroll() {
   // fonts, and iOS viewport chrome settle (often 1–4s after load).
   pageLoop.enterLoopBand = (holdMs = 6000) => {
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      const period = getPeriod();
+      const period = initActivePeriod();
       if (period <= 0) return;
 
       clearTimeout(settleTimer);
       suppressWrap = true;
       clearTimeout(wrapDebounceTimer);
-      if (wrapFrame) {
-        cancelAnimationFrame(wrapFrame);
-        wrapFrame = null;
-      }
 
-      scrollArea.scrollTop = period;
+      const target = loopNormalize(scrollArea.scrollTop, period, pageCount()) ?? period;
+      if (Math.abs(scrollArea.scrollTop - target) > 0.5) {
+        scrollArea.scrollTop = target;
+      }
       pinAnchorDuringResize(nearestPageBreak());
       compensateAnchorDrift();
 
@@ -200,10 +217,6 @@ function initScroll() {
     clearTimeout(settleTimer);
     suppressWrap = true;
     clearTimeout(wrapDebounceTimer);
-    if (wrapFrame) {
-      cancelAnimationFrame(wrapFrame);
-      wrapFrame = null;
-    }
 
     const anchor = nearestPageBreak();
     pinSync(anchor, () => {
@@ -357,10 +370,6 @@ function initScroll() {
     stopPinObserver();
     suppressWrap = true;
     clearTimeout(wrapDebounceTimer);
-    if (wrapFrame) {
-      cancelAnimationFrame(wrapFrame);
-      wrapFrame = null;
-    }
 
     let finished = false;
     const finish = () => {
@@ -421,19 +430,40 @@ function initScroll() {
   }, true);
 
   function onViewportChange() {
+    refreshActivePeriod();
     compensateAnchorDrift();
     applyLoopWrap();
     handleScroll();
   }
 
+  function markUserScroll() {
+    userScrollPending = true;
+    isUserScrolling = true;
+    stopPinObserver();
+    if (settleTimer) {
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(endStabilize, 400);
+    }
+  }
+
   scrollArea.addEventListener('scroll', () => {
+    pinAdjusting = false;
     scheduleLoopWrap();
     handleScroll();
   }, { passive: true });
-  scrollArea.addEventListener('touchstart', () => {
-    if (stabilizeAnchor) endStabilize();
+  scrollArea.addEventListener('touchstart', markUserScroll, { passive: true });
+  scrollArea.addEventListener('wheel', markUserScroll, { passive: true });
+  scrollArea.addEventListener('keydown', (event) => {
+    if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) {
+      markUserScroll();
+    }
+  });
+  scrollArea.addEventListener('scrollend', () => {
+    isUserScrolling = false;
+    userScrollPending = false;
+    refreshActivePeriod();
+    loopWrapNow();
   }, { passive: true });
-  scrollArea.addEventListener('scrollend', loopWrapNow, { passive: true });
   window.addEventListener('resize', onViewportChange);
   window.visualViewport?.addEventListener('resize', onViewportChange);
 

@@ -92,13 +92,44 @@ async function populateDetails(root = document) {
   }
 }
 
-function buildGallery(gridEl, { onAspectRatio } = {}) {
+async function resolveVideoAspectRatios(catalog) {
+  const videos = catalog.filter((m) => m.isVideo);
+  if (!videos.length) return;
+
+  await Promise.all(videos.map((media) => new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+
+    const done = () => {
+      video.removeAttribute('src');
+      video.load();
+      video.remove();
+      resolve();
+    };
+
+    video.onloadedmetadata = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        const reported = video.videoWidth / video.videoHeight;
+        const known = media.aspectRatio;
+        if (!(known > 0) || Math.abs(reported - known) / known >= 0.02) {
+          media.aspectRatio = reported;
+        }
+      }
+      done();
+    };
+    video.onerror = done;
+    video.src = media.url;
+  })));
+}
+
+function buildGallery(gridEl) {
   const GAP = 24;
 
   const lazy = new LazyMedia({
     root: scrollArea,
     rootMargin: '400px 0px',
-    onAspectRatio,
   });
 
   function estimateRenderWidth() {
@@ -155,12 +186,11 @@ async function initGallery() {
     const catalog = await fetchGalleryMedia();
     if (!catalog.length) throw new Error('no media');
 
+    await resolveVideoAspectRatios(catalog);
+
     const grids = [];
-    const syncAspectRatio = (id, ratio) => {
-      for (const grid of grids) grid.setAspectRatio(id, ratio);
-    };
     for (const p of pages) {
-      grids.push(buildGallery(p.querySelector('.bg-grid'), { onAspectRatio: syncAspectRatio }));
+      grids.push(buildGallery(p.querySelector('.bg-grid')));
     }
     grids.forEach((grid) => grid.add(catalog));
     await initGalleryFilters(catalog, grids);

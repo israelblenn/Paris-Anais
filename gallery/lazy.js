@@ -2,8 +2,7 @@
  * Visibility-driven media loader, fully decoupled from layout.
  *
  * Images load once when they approach the viewport, then stop being observed.
- * Videos load + play in view and pause out of view. When a video reports its
- * intrinsic size, `onAspectRatio` lets the grid correct that item's slot.
+ * Videos load + play in view and pause out of view.
  */
 
 /** iOS/Safari autoplay checks muted/playsinline/autoplay in HTML attributes. */
@@ -55,8 +54,7 @@ function ensureVideoPlays(el) {
 }
 
 export class LazyMedia {
-  constructor({ root = null, rootMargin = '300px 0px', onAspectRatio } = {}) {
-    this.onAspectRatio = onAspectRatio;
+  constructor({ root = null, rootMargin = '300px 0px' } = {}) {
     this._media = new WeakMap();
     this._videos = new Set();
     this._root = root;
@@ -141,11 +139,6 @@ export class LazyMedia {
       if (el.dataset.src) {
         setVideoSource(el, el.dataset.src);
         delete el.dataset.src;
-        el.addEventListener('loadedmetadata', () => {
-          if (el.videoWidth > 0 && el.videoHeight > 0) {
-            this.onAspectRatio?.(media?.id, el.videoWidth / el.videoHeight);
-          }
-        }, { once: true });
       }
       ensureVideoPlays(el);
     }
